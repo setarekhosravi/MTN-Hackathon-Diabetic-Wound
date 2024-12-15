@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from Unet.unet import UNet
 from Unet.utils.data_loading import BasicDataset
 from Unet.utils.utils import plot_img_and_mask
-from sklearn.cluster import KMeans
+from deepskin import wound_segmentation
 
 
 def initial_unet(args):
@@ -93,8 +93,9 @@ def extract_wound(img, mask):
 
     return wound_image
 
-def draw_countour(img, mask):
-    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+def draw_countour(args,img, mask):
+    if args.model.lower()!="deepskin":
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
     contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     image_with_contour = img.copy()
 
@@ -181,7 +182,7 @@ def segment_wound_parts(image):
         'purple (light)': [(130, 100, 150), (160, 255, 255)],  # Light purple
         'purple (dark)': [(130, 50, 100), (160, 100, 150)],  # Dark purple
     }
-    
+
     # Create an empty dictionary to store segmented parts
     segmented_parts = {}
     
@@ -215,6 +216,19 @@ def display_segmented_parts(segmented_parts):
     plt.tight_layout()
     plt.show()
 
+def deepskin(img):
+    # get the wound segmentation mask
+    segmentation = wound_segmentation(
+        img=img[..., ::-1],
+        tol=0.95,
+        verbose=True,
+    )
+
+    wound_mask, body_mask, bg_mask = cv2.split(segmentation)
+    wound = cv2.bitwise_and(img, img, mask=wound_mask)
+
+    return wound_mask, wound
+
 
 def check(img):
     cv2.imshow("img", img)
@@ -225,7 +239,7 @@ def check(img):
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images')
     parser.add_argument('--model', '-m', default='MODEL.pth', metavar='FILE',
-                        help='Specify the file in which the model is stored')
+                        help='Specify the file in which the model is stored or if you want to use deepskin you should type deepskin')
     parser.add_argument('--input', '-i', metavar='INPUT', nargs='+', help='Filenames of input images', required=True)
     parser.add_argument('--mask-threshold', '-t', type=float, default=0.5,
                         help='Minimum probability value to consider a mask pixel white')
@@ -236,15 +250,26 @@ def get_args():
     
     return parser.parse_args()
 
-if __name__ == '__main__':
+def main():
     args = get_args()
     # show segmentation mask
-    img, mask = infer(args)
-    # convert to numpy array
-    img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    mask = cv2.cvtColor(np.array(mask), cv2.COLOR_RGB2BGR)
-    draw_wound = draw_countour(img, mask)
-    wound = extract_wound(img, mask)
+    if args.model.lower()=="deepskin":
+        img = cv2.imread(args.input[0])
+        mask, wound = deepskin(img)
+
+    else:
+        img, mask = infer(args)
+        # convert to numpy array
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        mask = cv2.cvtColor(np.array(mask), cv2.COLOR_RGB2BGR)
+        wound = extract_wound(img, mask)
+    
+    draw_wound = draw_countour(args, img, mask)
+
     # print(analyze_colors(img))
     plot_color_histogram(analyze_colors(img))
     display_segmented_parts(segment_wound_parts(img))
+    # check(draw_wound)
+
+if __name__ == '__main__':
+    main()
