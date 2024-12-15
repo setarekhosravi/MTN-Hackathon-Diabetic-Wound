@@ -154,6 +154,67 @@ def plot_color_histogram(color_percentages):
     
     plt.show()
 
+def segment_wound_parts(image):
+    # Convert BGR to HSV for color segmentation
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Define HSV ranges for wound-specific colors
+    color_ranges = {
+        'red': [(0, 50, 50), (10, 255, 255)],  # Bright red
+        'dark red': [(170, 50, 50), (180, 255, 255)],  # Dark red
+        'yellow': [(20, 100, 100), (30, 255, 255)],  # Yellow (infection or slough)
+        'black': [(0, 0, 0), (180, 255, 50)],  # Necrotic tissue
+        'pink': [(160, 50, 50), (170, 255, 255)],  # Healthy granulation tissue
+        'brown': [(10, 50, 50), (20, 255, 200)],  # Eschar or dried blood
+        'purple': [(130, 50, 50), (160, 255, 255)],  # Bruising or vascular discoloration
+        
+        'yellow (light)': [(20, 100, 150), (40, 255, 255)],  # Light yellow
+        'yellow (dark)': [(20, 80, 80), (40, 100, 150)],  # Dark yellow
+        'white': [(0, 0, 200), (180, 30, 255)],  # White (exposed tissue)
+        
+        'brown (light)': [(10, 50, 100), (30, 255, 200)],  # Light brown
+        'brown (dark)': [(10, 30, 50), (30, 50, 100)],  # Dark brown
+        
+        'pink (light)': [(160, 100, 150), (170, 255, 255)],  # Light pink
+        'pink (dark)': [(160, 50, 100), (170, 100, 150)],  # Dark pink
+        
+        'purple (light)': [(130, 100, 150), (160, 255, 255)],  # Light purple
+        'purple (dark)': [(130, 50, 100), (160, 100, 150)],  # Dark purple
+    }
+    
+    # Create an empty dictionary to store segmented parts
+    segmented_parts = {}
+    
+    for color_name, (lower, upper) in color_ranges.items():
+        # Convert bounds to numpy arrays for cv2
+        lower_bound = np.array(lower, dtype="uint8")
+        upper_bound = np.array(upper, dtype="uint8")
+        
+        # Create a mask for the color
+        mask = cv2.inRange(hsv, lower_bound, upper_bound)
+        
+        # Segment the part of the image corresponding to the color
+        segmented_part = cv2.bitwise_and(image, image, mask=mask)
+        
+        # Save the segmented part in the dictionary
+        segmented_parts[color_name] = segmented_part
+        
+    return segmented_parts
+
+def display_segmented_parts(segmented_parts):
+    # Plot each segmented part
+    num_colors = len(segmented_parts)
+    plt.figure(figsize=(15, num_colors))
+    
+    for i, (color_name, segmented_image) in enumerate(segmented_parts.items()):
+        plt.subplot(1, num_colors, i + 1)
+        plt.imshow(cv2.cvtColor(segmented_image, cv2.COLOR_BGR2RGB))
+        plt.title(color_name)
+        plt.axis("off")
+    
+    plt.tight_layout()
+    plt.show()
+
 
 def check(img):
     cv2.imshow("img", img)
@@ -184,6 +245,6 @@ if __name__ == '__main__':
     mask = cv2.cvtColor(np.array(mask), cv2.COLOR_RGB2BGR)
     draw_wound = draw_countour(img, mask)
     wound = extract_wound(img, mask)
-    # check(draw_wound)
-    print(analyze_colors(img))
+    # print(analyze_colors(img))
     plot_color_histogram(analyze_colors(img))
+    display_segmented_parts(segment_wound_parts(img))
