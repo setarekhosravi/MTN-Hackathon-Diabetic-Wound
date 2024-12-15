@@ -16,11 +16,12 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
-from torchvision import transforms
+import matplotlib.pyplot as plt
 
 from Unet.unet import UNet
 from Unet.utils.data_loading import BasicDataset
 from Unet.utils.utils import plot_img_and_mask
+from sklearn.cluster import KMeans
 
 
 def initial_unet(args):
@@ -101,6 +102,59 @@ def draw_countour(img, mask):
     image_with_contour = cv2.drawContours(image_with_contour, contours, -1, (0, 255, 0), 2)
     return image_with_contour
 
+def analyze_colors(image):
+    # Convert BGR to HSV for better color analysis
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Define HSV ranges for wound-specific colors
+    color_ranges = {
+        'red': [(0, 50, 50), (10, 255, 255)],  # Bright red
+        'dark red': [(170, 50, 50), (180, 255, 255)],  # Dark red (close to purple)
+        'yellow': [(20, 100, 100), (30, 255, 255)],  # Yellow (infection or slough)
+        'black': [(0, 0, 0), (180, 255, 50)],  # Necrotic tissue
+        'pink': [(160, 50, 50), (170, 255, 255)],  # Healthy granulation tissue
+        'white': [(0, 0, 200), (180, 30, 255)],  # Exposed bone or tissue
+        'brown': [(10, 50, 50), (20, 255, 200)],  # Eschar or dried blood
+        'purple': [(130, 50, 50), (160, 255, 255)],  # Bruising or vascular discoloration
+    }
+    
+    color_percentages = {}
+    for color, (lower, upper) in color_ranges.items():
+        # Convert bounds to numpy arrays for cv2
+        lower_bound = np.array(lower, dtype="uint8")
+        upper_bound = np.array(upper, dtype="uint8")
+        
+        # Create mask and calculate percentage
+        mask = cv2.inRange(hsv, lower_bound, upper_bound)
+        percentage = (cv2.countNonZero(mask) / mask.size) * 100
+        color_percentages[color] = percentage
+    
+    return color_percentages
+
+def plot_color_histogram(color_percentages):
+    # Extract colors and their percentages
+    colors = list(color_percentages.keys())
+    percentages = list(color_percentages.values())
+    bar_colors = ['red', 'darkred', 'yellow', 'black', 'pink', 'white', 'brown', 'purple']
+    
+    # Create a bar chart
+    plt.figure(figsize=(10, 6), facecolor="lightgray")
+    ax = plt.gca()  # Get current axes
+    ax.set_facecolor("lightgray") 
+    bars = plt.bar(colors, percentages, color=bar_colors, alpha=0.8)
+    plt.title("Wound Color Percentage Histogram")
+    plt.xlabel("Colors")
+    plt.ylabel("Percentage (%)")
+    plt.ylim(0, 100)
+    
+    # Add percentages on top of the bars
+    for bar, percentage in zip(bars, percentages):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() - 5, 
+                 f'{percentage:.2f}%', ha='center', va='bottom', color='lightgray', fontsize=10)
+    
+    plt.show()
+
+
 def check(img):
     cv2.imshow("img", img)
     cv2.waitKey(0)
@@ -130,5 +184,6 @@ if __name__ == '__main__':
     mask = cv2.cvtColor(np.array(mask), cv2.COLOR_RGB2BGR)
     draw_wound = draw_countour(img, mask)
     wound = extract_wound(img, mask)
-    check(draw_wound)
-    
+    # check(draw_wound)
+    print(analyze_colors(img))
+    plot_color_histogram(analyze_colors(img))
