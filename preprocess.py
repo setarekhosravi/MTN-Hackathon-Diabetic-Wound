@@ -17,13 +17,10 @@ save_path = "Hackathon Official Data/Preprocessed"
 os.makedirs(save_path, exist_ok=True)
 
 # Parameters for preprocessing
-TARGET_SIZE = (256, 256)  # Resize all images to 256x256
 FILTER_KERNEL_SIZE = 5  # Kernel size for denoising filters
 
 # Preprocessing function for images
 def preprocess_image(image):
-    image = cv2.resize(image, TARGET_SIZE)
-
     # Apply Gaussian blur for denoising
     image = cv2.GaussianBlur(image, (FILTER_KERNEL_SIZE, FILTER_KERNEL_SIZE), 0)
 
@@ -34,9 +31,6 @@ def preprocess_image(image):
     l = clahe.apply(l)
     lab = cv2.merge((l, a, b))
     image = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
-
-    # Normalize pixel values to the range [0, 255]
-    image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
 
     return image
 
