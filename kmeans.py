@@ -60,6 +60,11 @@ print(f"Applying K-Means with {N_CLUSTERS} clusters on UMAP embedding...")
 kmeans = KMeans(n_clusters=N_CLUSTERS, init='k-means++', n_init=50, max_iter=1000, random_state=42)
 labels = kmeans.fit_predict(umap_embedding)
 
+# Save KMeans model
+kmeans_model_path = os.path.join(OUTPUT_DIR, "kmeans_model.joblib")
+dump(kmeans, kmeans_model_path)
+print(f"KMeans model saved at {kmeans_model_path}")
+
 # Evaluate
 sil_score = silhouette_score(umap_embedding, labels)
 ch_score = calinski_harabasz_score(umap_embedding, labels)
@@ -100,5 +105,5 @@ plt.title(f"K-Means Clustering - {N_CLUSTERS} Clusters (UMAP Embedding)")
 plt.legend(loc="upper right")
 visualization_path = os.path.join(OUTPUT_DIR, "kmeans_clusters_umap.png")
 plt.savefig(visualization_path, dpi=300)
-plt.show()
+plt.close()  # Change plt.show() to plt.close() to prevent display in non-interactive environments
 print(f"Cluster visualization saved at {visualization_path}")
