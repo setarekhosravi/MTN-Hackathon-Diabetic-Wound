@@ -101,7 +101,7 @@ The application analyzes wounds using the following color ranges in HSV format:
    - ResNet50 feature extraction
 
 2. **Segmentation**:
-   - U-Net or DeepSkin model segmentation
+   - U-Net or DeepSkin model segmentation (Download checkpoints from [here](https://drive.google.com/drive/folders/1IFMbiQjTgPVK8HGQ_rIaQXU_mcFwZ0eN?usp=sharing))
    - Mask generation and wound extraction
    - Contour drawing and dilation
 
