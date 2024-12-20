@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Dec 15 for Hakathon
+    @author: STRH, Ebadzadeh
+    final test
+"""
+
 import cv2
 import argparse
 import logging
@@ -16,6 +24,8 @@ from Unet.utils.utils import plot_img_and_mask
 from deepskin import wound_segmentation
 import umap.umap_ as umap
 from sklearn.cluster import KMeans
+from crop_images import find_contour, crop
+from preprocess import preprocess_image
 
 ###############################################
 # GLOBALS & CONFIGURATIONS
@@ -45,7 +55,7 @@ REFINED_COLOR_RANGES = {
 ALL_COLOR_RANGES = {**COLOR_RANGES, **REFINED_COLOR_RANGES}
 
 ###############################################
-# U-NET PREDICTION
+# U-NET/DeepSkin PREDICTION
 ###############################################
 def initial_unet(args):
     net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
@@ -90,8 +100,8 @@ def mask_to_image(mask: np.ndarray, mask_values):
 
     return Image.fromarray(out)
 
-def infer(args):
-    img = Image.open(args.input[0])
+def infer(args, img):
+    img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     mask_values, net = initial_unet(args)
     mask = predict_img(net=net,
@@ -102,9 +112,12 @@ def infer(args):
     mask = mask_to_image(mask, mask_values)
     return img, mask
 
-def extract_wound(img, mask):
-    gray_mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-    wound_image = cv2.bitwise_and(img, img, mask=gray_mask)
+def extract_wound(args, img, mask):
+    # Create a masked image showing only the wound area
+    if args.model.lower()!="deepskin":
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+    wound_image = cv2.bitwise_and(img, img, mask=mask)
+
     return wound_image
 
 def draw_countour(args, img, mask):
@@ -114,6 +127,57 @@ def draw_countour(args, img, mask):
     image_with_contour = img.copy()
     image_with_contour = cv2.drawContours(image_with_contour, contours, -1, (0, 255, 0), 2)
     return image_with_contour
+
+def dilate(mask, kernel_size):
+    kernel = np.ones((kernel_size, kernel_size), np.uint8) 
+    dilated_mask = cv2.dilate(mask, kernel, iterations=1) 
+
+    return dilated_mask
+
+def skin_extraxtor(args, img, mask):
+    dilated = dilate(mask, 25)
+    skin_mask = dilated - mask
+    around_skin = extract_wound(args, img, skin_mask)
+
+    return  around_skin
+
+def show_wound_parts(args, img):
+    wound_list = ["Original Image", "Wound Mask", "Wound Part", "Wound", "Outer Layer"]
+    if args.model.lower()=="deepskin":
+        mask, wound = deepskin(img)
+
+    else:
+        img, mask = infer(args, img)
+        # convert to numpy array
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        mask = cv2.cvtColor(np.array(mask), cv2.COLOR_RGB2BGR)
+        wound = extract_wound(args, img, mask)
+    
+    draw_wound = draw_countour(args, img, mask)
+    around_skin = skin_extraxtor(args, img, mask)
+
+    image_list = [img, mask,
+                  draw_wound, wound, around_skin]
+    
+    plt.figure(figsize=(15, len(image_list)))
+    for i in range(len(image_list)):
+        plt.subplot(1, len(image_list), i + 1)
+        plt.imshow(cv2.cvtColor(image_list[i], cv2.COLOR_BGR2RGB))
+        plt.title(wound_list[i])
+        plt.axis("off")
+    
+    plt.tight_layout()
+    plt.show()
+
+def deepskin(img):
+    segmentation = wound_segmentation(
+        img=img[..., ::-1],
+        tol=0.95,
+        verbose=True,
+    )
+    wound_mask, body_mask, bg_mask = cv2.split(segmentation)
+    wound = cv2.bitwise_and(img, img, mask=wound_mask)
+    return wound_mask, wound
 
 ###############################################
 # COLOR ANALYSIS & SEGMENTATION
@@ -170,16 +234,6 @@ def display_segmented_parts(segmented_parts):
         plt.axis("off")
     plt.tight_layout()
     plt.show()
-
-def deepskin(img):
-    segmentation = wound_segmentation(
-        img=img[..., ::-1],
-        tol=0.95,
-        verbose=True,
-    )
-    wound_mask, body_mask, bg_mask = cv2.split(segmentation)
-    wound = cv2.bitwise_and(img, img, mask=wound_mask)
-    return wound_mask, wound
 
 ###############################################
 # K-MEANS CLUSTER PREDICTION FUNCTION
@@ -240,18 +294,17 @@ def main():
     args = get_args()
 
     for image_path in args.input:
-        print(f"\nProcessing image: {image_path}")
+        print(f"\nPre-Processing image...")
+        original_img = cv2.imread(image_path)
+        bounding_box = find_contour(original_img)
+        img = crop(image=original_img, bbox=bounding_box)
+        img_for_clustering = preprocess_image(img)
+        print(f"Pre-Processing Done!")
 
-        if args.model.lower() == "deepskin":
-            img = cv2.imread(image_path)
-            mask, wound = deepskin(img)
-        else:
-            img_pil, mask_pil = infer(args)
-            img = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
-            mask = cv2.cvtColor(np.array(mask_pil), cv2.COLOR_RGB2BGR)
-            wound = extract_wound(img, mask)
+        print(f"\nProcessing image...")
 
-        draw_wound = draw_countour(args, img, mask)
+        # Show wound parts
+        show_wound_parts(args, img)
 
         # Analyze colors and plot histogram
         color_percentages = analyze_colors(img)
@@ -262,7 +315,7 @@ def main():
         display_segmented_parts(parts)
 
         # Predict cluster using K-Means (with UMAP)
-        cluster_id = predict_cluster_for_wound(img, args.kmeans_model, args.umap_model)
+        cluster_id = predict_cluster_for_wound(img_for_clustering, args.kmeans_model, args.umap_model)
         print(f"Cluster prediction for {image_path}: {cluster_id}")
 
 if __name__ == '__main__':
