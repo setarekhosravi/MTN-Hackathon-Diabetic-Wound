@@ -1,10 +1,55 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
 from PIL import Image, ImageTk  # Import for handling images
 import time
 
 def show_next_page():
-    root.destroy()  # Close the current window for now; next page logic will be added later.
+    # Destroy the current window and open the next page
+    root.destroy()
+    next_page()
+
+def next_page():
+    # Initialize the next page window
+    next_window = tk.Tk()
+    next_window.title("Choose Image and Model")
+    next_window.geometry("600x400")
+
+    def browse_image():
+        # Open file dialog to choose an image
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.bmp")])
+        if file_path:
+            image_label.config(text=f"Selected Image: {file_path}")
+
+    def save_selection():
+        # Save the selected image path and model
+        selected_model = model_var.get()
+        print(f"Image Path: {image_label.cget('text').split(': ', 1)[1]}")
+        print(f"Selected Model: {selected_model}")
+        next_window.destroy()
+
+    # Add widgets to the next page
+    instruction_label = tk.Label(next_window, text="Choose an image and a model", font=("Comic Sans MS", 14, "bold"))
+    instruction_label.pack(pady=10)
+
+    browse_button = tk.Button(next_window, text="Browse Image", command=browse_image, font=("Comic Sans MS", 12))
+    browse_button.pack(pady=10)
+
+    image_label = tk.Label(next_window, text="No Image Selected", font=("Comic Sans MS", 12))
+    image_label.pack(pady=10)
+
+    # Add radio buttons for model selection
+    model_var = tk.StringVar(value="u-net")  # Default value is "u-net"
+    u_net_radio = tk.Radiobutton(next_window, text="U-Net", variable=model_var, value="u-net", font=("Comic Sans MS", 12))
+    u_net_radio.pack(pady=5)
+
+    deep_skin_radio = tk.Radiobutton(next_window, text="DeepSkin", variable=model_var, value="deepskin", font=("Comic Sans MS", 12))
+    deep_skin_radio.pack(pady=5)
+
+    save_button = tk.Button(next_window, text="Save Selection", command=save_selection, font=("Comic Sans MS", 12))
+    save_button.pack(pady=20)
+
+    next_window.mainloop()
 
 # Initialize the main window
 root = tk.Tk()
