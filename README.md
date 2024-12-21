@@ -131,14 +131,6 @@ python test.py --model MODEL.pth --input IMAGE_PATH [OPTIONS]
 - `--bilinear`: Use bilinear upsampling
 - `--classes, -c`: Number of classes (default: 2)
 
-### File Structure
-
-- `wound_analysis_app.py`: Main GUI application
-- `test.py`: Core analysis functions
-- `crop_images.py`: Image preprocessing utilities
-- `preprocess.py`: Image preprocessing functions
-- `Unet/`: U-Net model implementation
-- `deepskin.py`: DeepSkin model implementation
 
 ### Output
 
