@@ -1,0 +1,6 @@
+Clustering Performance Metrics (UMAP+KMeans):
+Number of Clusters: 5
+Silhouette Score: 0.4486
+Inertia: 755.2656
+Calinski-Harabasz Score: 1641.8092
+Davies-Bouldin Score: 0.7992
