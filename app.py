@@ -3,14 +3,12 @@ from tkinter import filedialog, messagebox, scrolledtext
 from tkinter import ttk
 from PIL import Image, ImageTk
 import cv2
-from test_for_app import (show_wound_parts, analyze_colors, plot_color_histogram, segment_wound_parts,
+from main import (show_wound_parts, analyze_colors, plot_color_histogram, segment_wound_parts,
                   display_segmented_parts, predict_cluster_for_wound)
-from crop_images import find_contour, crop
-from preprocess import preprocess_image
-# from groq import Groq
-# from transformers import pipeline
-from transformers import pipeline
-import torch
+from utils.crop_images import find_contour, crop
+from utils.preprocess import preprocess_image
+import openai
+
 
 class WoundAnalysisApp:
     def __init__(self):
@@ -18,16 +16,8 @@ class WoundAnalysisApp:
         self.selected_image = None
         self.selected_model = None
         self.preprocessed_image = None
-        self.color_percentages = None
-        # self.api_key = "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"
-        # self.groq_client = Groq(api_key=self.api_key)
-        self.text_generator = pipeline("text-generation", model="gpt2")
-        # self.pipe = pipeline(
-        #     "text-generation", 
-        #     model="meta-llama/Llama-3.2-1B", 
-        #     torch_dtype=torch.bfloat16, 
-        #     device_map="auto"
-        # )
+        self.color_percentages = {}
+        openai.api_key = "API_KEY"
         self.show_welcome_page()
 
     def show_welcome_page(self):
@@ -39,7 +29,7 @@ class WoundAnalysisApp:
         self.current_window.geometry("600x400")
 
         # Load and set background image
-        background_image = Image.open("irancell-ehsanmobile.blog.ir.jpg")
+        background_image = Image.open("Hackathon Official Data/irancell-ehsanmobile.blog.ir.jpg")
         background_photo = ImageTk.PhotoImage(background_image)
         
         background_label = tk.Label(self.current_window, image=background_photo)
@@ -50,11 +40,11 @@ class WoundAnalysisApp:
         frame.place(relx=0.5, rely=0.15, anchor=tk.CENTER)
 
         project_name_label = tk.Label(frame, text="Diabetic Wound Segmentation and Clustering",
-                                      bg="#FCBC14", fg="black", font=("Comic Sans MS", 16, "bold"))
+                                      bg="#FCBC14", fg="black", font=('courier 10 pitch', 16, "bold"))
         project_name_label.pack(pady=1)
 
         welcome_label = tk.Label(frame, text="Welcome!", 
-                                 bg="#FCBC14", fg="black", font=("Comic Sans MS", 12, "bold"))
+                                 bg="#FCBC14", fg="black", font=("courier 10 pitch", 12, "bold"))
         welcome_label.pack(pady=1)
 
         self.current_window.after(5000, self.show_selection_page)
@@ -70,32 +60,32 @@ class WoundAnalysisApp:
         self.current_window.configure(bg="#FCBC14")
 
         instruction_label = tk.Label(self.current_window, text="Choose an image and a model",
-                                     font=("Comic Sans MS", 14, "bold"), bg="#FCBC14", fg="black")
+                                     font=("courier 10 pitch", 14, "bold"), bg="#FCBC14", fg="black")
         instruction_label.pack(pady=10)
 
         browse_button = tk.Button(self.current_window, text="Browse Image",
-                                  command=self.browse_image, font=("Comic Sans MS", 12),
+                                  command=self.browse_image, font=("courier 10 pitch", 12),
                                   bg="black", fg="#FCBC14")
         browse_button.pack(pady=10)
 
         self.image_label = tk.Label(self.current_window, text="No Image Selected",
-                                    font=("Comic Sans MS", 12), bg="#FCBC14", fg="black")
+                                    font=("courier 10 pitch", 12), bg="#FCBC14", fg="black")
         self.image_label.pack(pady=10)
 
         self.model_var = tk.StringVar(value="u-net")
         u_net_radio = tk.Radiobutton(self.current_window, text="U-Net",
                                      variable=self.model_var, value="u-net",
-                                     font=("Comic Sans MS", 12), bg="#FCBC14", fg="black")
+                                     font=("courier 10 pitch", 12), bg="#FCBC14", fg="black")
         u_net_radio.pack(pady=5)
 
         deep_skin_radio = tk.Radiobutton(self.current_window, text="DeepSkin",
                                          variable=self.model_var, value="deepskin",
-                                         font=("Comic Sans MS", 12), bg="#FCBC14", fg="black")
+                                         font=("courier 10 pitch", 12), bg="#FCBC14", fg="black")
         deep_skin_radio.pack(pady=5)
 
         next_button = tk.Button(self.current_window, text="Next",
                                 command=self.show_preprocessing_page,
-                                font=("Comic Sans MS", 12), bg="black", fg="#FCBC14")
+                                font=("courier 10 pitch", 12), bg="black", fg="#FCBC14")
         next_button.pack(pady=20)
 
     def browse_image(self):
@@ -134,7 +124,7 @@ class WoundAnalysisApp:
         img_label.pack(pady=20)
 
         next_button = tk.Button(self.current_window, text="Next",
-                                command=self.show_clustering_page, font=("Comic Sans MS", 12),
+                                command=self.show_clustering_page, font=("courier 10 pitch", 12),
                                 bg="black", fg="#FCBC14")
         next_button.pack(pady=20)
 
@@ -152,10 +142,10 @@ class WoundAnalysisApp:
         cluster_id = predict_cluster_for_wound(img_for_clustering,
                                                kmeans_model_path="Hackathon Official Data/Results/kmeans_model.joblib",
                                                umap_model_path="Hackathon Official Data/Results/umap_model.joblib")
-        tk.Label(self.current_window, text=f"Cluster ID: {cluster_id}", font=("Comic Sans MS", 14), bg="#FCBC14").pack(pady=20)
+        tk.Label(self.current_window, text=f"Cluster ID: {cluster_id}", font=("courier 10 pitch", 14), bg="#FCBC14").pack(pady=20)
 
         next_button = tk.Button(self.current_window, text="Next",
-                                command=self.show_wound_parts_page, font=("Comic Sans MS", 12),
+                                command=self.show_wound_parts_page, font=("courier 10 pitch", 12),
                                 bg="black", fg="#FCBC14")
         next_button.pack(pady=20)
 
@@ -179,78 +169,50 @@ class WoundAnalysisApp:
 
         next_button = tk.Button(self.current_window, text="Next",
                               command=self.show_results_page,
-                              font=("Comic Sans MS", 12),
+                              font=("courier 10 pitch", 12),
                               bg="black", fg="#FCBC14")
         next_button.pack(pady=20)
 
-    # def generate_llm_report(self):
-    #     # Create a detailed prompt for the LLM
-    #     color_info = "\n".join([f"{color}: {percentage:.2f}%" for color, percentage in self.color_percentages.items()])
-        
-    #     prompt = f"""As an experienced wound care specialist nurse, please analyze this diabetic wound based on the following color percentages and provide a detailed assessment and recommendations:
-
-    #             {color_info}
-
-    #             Please provide:
-    #             1. An assessment of the wound condition based on these colors
-    #             2. What stage of healing the wound appears to be in
-    #             3. Specific treatment recommendations
-    #             4. Any warning signs or concerns
-    #             5. Follow-up care instructions
-
-    #             Please format your response in clear sections with headers."""
-
-    #     try:
-    #         chat_completion = self.groq_client.chat.completions.create(
-    #             messages=[
-    #                 {
-    #                     "role": "system",
-    #                     "content": "You are an experienced wound care specialist nurse with expertise in diabetic wound assessment and treatment."
-    #                 },
-    #                 {
-    #                     "role": "user",
-    #                     "content": prompt,
-    #                 }
-    #             ],
-    #             model="llama3-8b-8192",
-    #             temperature=0.5,
-    #             max_tokens=1024,
-    #             top_p=1,
-    #             stop=", 6",
-    #             stream=False,
-    #         )
-    #         return chat_completion.choices[0].message.content
-    #     except Exception as e:
-    #         return f"Error generating report: {str(e)}\n\nPlease check your API key and internet connection."
-
     def generate_llm_report(self):
-        # Create a detailed prompt for the LLM with examples
+        """
+        Generate a detailed wound analysis report using OpenAI GPT-4.
+        """
+        # Format the color percentages into a readable string
         color_info = "\n".join([f"{color}: {percentage:.2f}%" for color, percentage in self.color_percentages.items()])
-        
-        prompt = f"""You are an experienced wound care specialist nurse with expertise in diabetic wound assessment and treatment.
 
-        Here are the color percentages of a diabetic wound:
+        # Create the prompt for GPT-4
+        prompt = f"""
+        As an experienced wound care specialist nurse, analyze this diabetic wound based on the following color percentages and provide a detailed assessment and recommendations:
+
         {color_info}
 
-        Based on these colors, provide a detailed report:
+        Please provide:
+        1. An assessment of the wound condition based on these colors.
+        2. The stage of healing the wound appears to be in.
+        3. Specific treatment recommendations.
+        4. Any warning signs or concerns.
+        5. Follow-up care instructions.
 
-        Example:
-        - Colors: Red: 50%, Yellow: 30%, Black: 20%
-        - Assessment: The wound shows 50% red, indicating active inflammation. The 30% yellow area suggests slough, which may delay healing, and 20% black indicates necrosis.
-        - Stage of Healing: The wound appears to be in the inflammatory stage.
-        - Recommendations: Debridement of necrotic tissue is advised. Apply moist dressings to promote granulation.
-        - Warning Signs: Risk of infection in the sloughy and necrotic areas. Monitor for fever or increased redness around the wound.
-        - Follow-up Care: Weekly wound evaluations and possible antibiotics if infection occurs.
+        Please format your response in clear sections with headers.
+        """
 
-        Now provide the analysis for the given wound:
-        - Colors: {color_info}
-        - Assessment:"""
-
-        # Generate the report using the Hugging Face text generation pipeline
         try:
-            response = self.text_generator(prompt, max_length=500, num_return_sequences=1)
-            return response[0]['generated_text']
+            # Call the GPT-4 API
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are an experienced wound care specialist nurse."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=1024,
+                temperature=0.7
+            )
+
+            # Extract the generated response
+            return response["choices"][0]["message"]["content"]
+
         except Exception as e:
+            # Handle errors gracefully
             return f"Error generating report: {str(e)}"
 
 
@@ -267,7 +229,7 @@ class WoundAnalysisApp:
         # Add title
         title_label = tk.Label(self.current_window,
                              text="Wound Analysis Report",
-                             font=("Comic Sans MS", 18, "bold"),
+                             font=("courier 10 pitch", 18, "bold"),
                              bg="#FCBC14",
                              fg="black")
         title_label.pack(pady=20)
@@ -296,7 +258,7 @@ class WoundAnalysisApp:
         restart_button = tk.Button(button_frame,
                                  text="Start New Analysis",
                                  command=self.show_welcome_page,
-                                 font=("Comic Sans MS", 12),
+                                 font=("courier 10 pitch", 12),
                                  bg="black",
                                  fg="#FCBC14")
         restart_button.pack(side=tk.LEFT, padx=10)
@@ -304,7 +266,7 @@ class WoundAnalysisApp:
         exit_button = tk.Button(button_frame,
                               text="Exit",
                               command=self.current_window.destroy,
-                              font=("Comic Sans MS", 12),
+                              font=("courier 10 pitch", 12),
                               bg="black",
                               fg="#FCBC14")
         exit_button.pack(side=tk.LEFT, padx=10)
