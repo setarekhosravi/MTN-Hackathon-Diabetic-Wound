@@ -1,5 +1,6 @@
-# Computer Vision Hackathon
+# Diabetic Wound Analysis Application
 
+A desktop application for analyzing diabetic wounds through image processing, segmentation, and machine learning techniques. The application provides automated wound assessment, color analysis, and generates detailed medical reports.
 
 ## Table of Contents
 1. [Diabetic Wound Analysis Application](#diabetic-wound-analysis-application)
@@ -24,11 +25,7 @@
 9. [Notes](#notes)
 10. [Contributing](#contributing)
 
-## Diabetic Wound Analysis Application
-
-A desktop application for analyzing diabetic wounds through image processing, segmentation, and machine learning techniques. The application provides automated wound assessment, color analysis, and generates detailed medical reports.
-
-### Features
+## Features
 
 - Interactive GUI built with Tkinter
 - Image preprocessing and wound area detection
@@ -38,9 +35,9 @@ A desktop application for analyzing diabetic wounds through image processing, se
 - AI-powered wound assessment report generation
 - Step-by-step analysis workflow
 
-### Requirements
+## Requirements
 
-#### Dependencies
+### Dependencies
 ```
 python >= 3.8
 tkinter
@@ -56,13 +53,13 @@ joblib
 umap-learn
 ```
 
-#### Model Files
+### Model Files
 The application requires pre-trained models in the following locations:
 - `Hackathon Official Data/Results/kmeans_model.joblib`: Pre-trained K-means clustering model
 - `Hackathon Official Data/Results/umap_model.joblib`: Pre-trained UMAP dimensionality reduction model
 - U-Net model file (`.pth` format)
 
-### Installation
+## Installation
 
 1. Clone the repository
 2. Install the required dependencies:
@@ -71,13 +68,13 @@ pip install pillow opencv-python torch transformers scikit-learn matplotlib tens
 ```
 3. Ensure you have the required model files in the correct directory structure
 
-### Technical Details
+## Technical Details
 
-#### Color Analysis
+### Color Analysis
 
 The application analyzes wounds using the following color ranges in HSV format:
 
-##### Basic Colors
+#### Basic Colors
 - Red: `(0-10, 50-255, 50-255)`
 - Dark Red: `(170-180, 50-255, 50-255)`
 - Yellow: `(20-30, 100-255, 100-255)`
@@ -87,13 +84,13 @@ The application analyzes wounds using the following color ranges in HSV format:
 - Brown: `(10-20, 50-255, 50-200)`
 - Purple: `(130-160, 50-255, 50-255)`
 
-##### Refined Color Ranges
+#### Refined Color Ranges
 - Light/Dark Yellow
 - Light/Dark Brown
 - Light/Dark Pink
 - Light/Dark Purple
 
-#### Image Processing Pipeline
+### Image Processing Pipeline
 
 1. **Preprocessing**:
    - Contour detection and cropping
@@ -115,7 +112,7 @@ The application analyzes wounds using the following color ranges in HSV format:
    - UMAP dimensionality reduction
    - K-means clustering prediction
 
-### Command Line Usage
+## Command Line Usage
 
 The application can also be run from the command line:
 
@@ -123,7 +120,7 @@ The application can also be run from the command line:
 python test.py --model MODEL.pth --input IMAGE_PATH [OPTIONS]
 ```
 
-#### Command Line Arguments
+### Command Line Arguments
 - `--model, -m`: Model file path or "deepskin"
 - `--input, -i`: Input image path(s)
 - `--mask-threshold, -t`: Mask probability threshold (default: 0.5)
@@ -132,7 +129,7 @@ python test.py --model MODEL.pth --input IMAGE_PATH [OPTIONS]
 - `--classes, -c`: Number of classes (default: 2)
 
 
-### Output
+## Output
 
 The application generates:
 1. Segmented wound images
@@ -141,13 +138,13 @@ The application generates:
 4. Cluster prediction
 5. Detailed wound assessment report
 
-### Notes
+## Notes
 
 - The application uses ResNet50 for feature extraction
 - UMAP is used for dimensionality reduction before clustering
 - Color analysis uses HSV color space for better accuracy
 - Both U-Net and DeepSkin models are supported for segmentation
 
-### Contributing
+## Contributing
 
 Feel free to submit issues, fork the repository, and create pull requests for any improvements.
